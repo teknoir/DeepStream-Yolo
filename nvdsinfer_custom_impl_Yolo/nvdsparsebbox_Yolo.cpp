@@ -137,16 +137,27 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
     return false;
   }
 
+  auto layerFinder = [&outputLayersInfo](const std::string &name)
+      -> const NvDsInferLayerInfo *{
+      for (auto &layer : outputLayersInfo) {
+          if (layer.dataType == FLOAT &&
+            (layer.layerName && name == layer.layerName)) {
+              return &layer;
+          }
+      }
+      return nullptr;
+  };
+
   std::vector<NvDsInferParseObjectInfo> objects;
 
-  const NvDsInferLayerInfo& boxes = outputLayersInfo[0];
-  const NvDsInferLayerInfo& scores = outputLayersInfo[1];
-  const NvDsInferLayerInfo& classes = outputLayersInfo[2];
+  const NvDsInferLayerInfo * boxes = layerFinder("boxes");
+  const NvDsInferLayerInfo * scores = layerFinder("scores");
+  const NvDsInferLayerInfo * classes = layerFinder("classes");
 
-  const uint outputSize = boxes.inferDims.d[0];
+  const uint outputSize = boxes->inferDims.d[0];
 
-  std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYolo((const float*) (boxes.buffer),
-      (const float*) (scores.buffer), (const float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height,
+  std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYolo((const float*) (boxes->buffer),
+      (const float*) (scores->buffer), (const float*) (classes->buffer), outputSize, networkInfo.width, networkInfo.height,
       detectionParams.perClassPreclusterThreshold);
 
   objects.insert(objects.end(), outObjs.begin(), outObjs.end());
