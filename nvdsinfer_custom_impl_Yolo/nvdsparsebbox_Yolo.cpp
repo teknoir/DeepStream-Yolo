@@ -26,7 +26,9 @@
 #include "nvdsinfer_custom_impl.h"
 
 #include "utils.h"
-
+#ifdef SOFTMAX
+ #include <math.h>
+#endif 
 extern "C" bool
 NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList);
@@ -78,9 +80,22 @@ decodeTensorYolo(const float* boxes, const float* scores, const float* classes, 
     const uint& netH, const std::vector<float>& preclusterThreshold)
 {
   std::vector<NvDsInferParseObjectInfo> binfo;
-
+  float exp_sum=0.0;
+  #ifdef SOFTMAX
+  // do softmax calculation here
+   for (uint b = 0; b < outputSize; ++b)
+    { 
+    exp_sum+=exp(scores[b]);
+    }
+   #else
+   exp_sum=1.0;
+   #endif
   for (uint b = 0; b < outputSize; ++b) {
+    #ifdef SOFTMAX
+    float maxProb = exp(scores[b])/exp_sum;
+    #else
     float maxProb = scores[b];
+    #endif
     int maxIndex = (int) classes[b];
 
     if (maxProb < preclusterThreshold[maxIndex]) {
@@ -108,9 +123,22 @@ decodeTensorYoloE(const float* boxes, const float* scores, const float* classes,
     const uint& netH, const std::vector<float>& preclusterThreshold)
 {
   std::vector<NvDsInferParseObjectInfo> binfo;
-
+  float exp_sum=0.0;
+  #ifdef SOFTMAX
+  // do softmax calculation here
+  for (uint b = 0; b < outputSize; ++b)
+  { 
+  exp_sum+=exp(scores[b]);
+  }
+  #else
+  exp_sum=1.0;
+  #endif
   for (uint b = 0; b < outputSize; ++b) {
+    #ifdef SOFTMAX
+    float maxProb = exp(scores[b])/exp_sum;
+    #else
     float maxProb = scores[b];
+    #endif
     int maxIndex = (int) classes[b];
 
     if (maxProb < preclusterThreshold[maxIndex]) {
