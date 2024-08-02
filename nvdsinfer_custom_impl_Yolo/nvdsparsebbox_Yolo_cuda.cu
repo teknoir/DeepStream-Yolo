@@ -29,6 +29,20 @@
 
 #include "nvdsinfer_custom_impl.h"
 
+//for softmax calculation
+#ifdef SOFTMAX
+#include <thrust/reduce.h>
+#endif
+
+
+#ifdef SOFTMAX
+struct exp_add {
+    __host__ __device__
+    int operator()(const float& x,const int& y) const {
+        return x+expf(y);
+    }
+};
+#endif
 extern "C" bool
 NvDsInferParseYoloCuda(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList);
@@ -134,7 +148,14 @@ static bool NvDsInferParseCustomYoloCuda(std::vector<NvDsInferLayerInfo> const& 
 
   int threads_per_block = 1024;
   int number_of_blocks = ((outputSize - 1) / threads_per_block) + 1;
-
+  #ifdef SOFTMAX
+  // do softmax calculation here
+  // put scores on the device
+  thrust::device_vector<float> raw_scores((float*) (scores.buffer),(float*) (scores.buffer)+outputSize);
+  float exp_sum = thrust::reduce(raw_scores.begin(),raw_scores.end(),0,exp_add());
+  #else
+  float exp_sum=1.;
+  #endif
   decodeTensorYoloCuda<<<number_of_blocks, threads_per_block>>>(
       thrust::raw_pointer_cast(objects.data()), (float*) (boxes.buffer), (float*) (scores.buffer),
       (float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height, minPreclusterThreshold);
@@ -167,7 +188,14 @@ static bool NvDsInferParseCustomYoloECuda(std::vector<NvDsInferLayerInfo> const&
 
   int threads_per_block = 1024;
   int number_of_blocks = ((outputSize - 1) / threads_per_block) + 1;
-
+  #ifdef SOFTMAX
+   // do softmax calculation here
+   // put scores on the device
+   thrust::device_vector<float> raw_scores((float*) (scores.buffer),(float*) (scores.buffer)+outputSize);
+   float exp_sum = thrust::reduce(raw_scores.begin(),raw_scores.end(),0,exp_add());
+   #else
+   float exp_sum=1.;
+   #endif
   decodeTensorYoloECuda<<<number_of_blocks, threads_per_block>>>(
       thrust::raw_pointer_cast(objects.data()), (float*) (boxes.buffer), (float*) (scores.buffer),
       (float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height, minPreclusterThreshold);
