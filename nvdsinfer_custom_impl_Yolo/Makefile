@@ -83,6 +83,9 @@ SRCFILES+= $(wildcard layers/*.cpp)
 SRCFILES+= $(wildcard *.cu)
 
 TARGET_LIB:= libnvdsinfer_custom_impl_Yolo.so
+ifeq ($(SOFTMAX), 1)
+ TARGET_LIB:= libnvdsinfer_custom_impl_Yolo_softmax.so
+endif
 
 TARGET_OBJS:= $(SRCFILES:.cpp=.o)
 TARGET_OBJS:= $(TARGET_OBJS:.cu=.o)
