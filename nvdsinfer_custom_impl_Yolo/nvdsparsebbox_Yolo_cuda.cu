@@ -52,15 +52,19 @@ NvDsInferParseYoloECuda(std::vector<NvDsInferLayerInfo> const& outputLayersInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList);
 
 __global__ void decodeTensorYoloCuda(NvDsInferParseObjectInfo *binfo, float* boxes, float* scores, float* classes,
-    int outputSize, int netW, int netH, float minPreclusterThreshold)
+    int outputSize, int netW, int netH, float minPreclusterThreshold, float exp_sum)
 {
   int x_id = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (x_id >= outputSize) {
     return;
   }
-
+  #ifdef SOFTMAX
+  // do softmax calculation here
+  float maxProb = expf(scores[x_id])/exp_sum;
+  #else
   float maxProb = scores[x_id];
+  #endif
   int maxIndex = (int) classes[x_id];
 
   if (maxProb < minPreclusterThreshold) {
@@ -92,15 +96,19 @@ __global__ void decodeTensorYoloCuda(NvDsInferParseObjectInfo *binfo, float* box
 }
 
 __global__ void decodeTensorYoloECuda(NvDsInferParseObjectInfo *binfo, float* boxes, float* scores, float* classes,
-    int outputSize, int netW, int netH, float minPreclusterThreshold)
+    int outputSize, int netW, int netH, float minPreclusterThreshold,float exp_sum)
 {
   int x_id = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (x_id >= outputSize) {
     return;
   }
-
+  #ifdef SOFTMAX
+  // do softmax calculation here
+  float maxProb = expf(scores[x_id])/exp_sum;
+  #else
   float maxProb = scores[x_id];
+  #endif
   int maxIndex = (int) classes[x_id];
 
   if (maxProb < minPreclusterThreshold) {
@@ -158,7 +166,7 @@ static bool NvDsInferParseCustomYoloCuda(std::vector<NvDsInferLayerInfo> const& 
   #endif
   decodeTensorYoloCuda<<<number_of_blocks, threads_per_block>>>(
       thrust::raw_pointer_cast(objects.data()), (float*) (boxes.buffer), (float*) (scores.buffer),
-      (float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height, minPreclusterThreshold);
+      (float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height, minPreclusterThreshold,exp_sum);
 
   objectList.resize(outputSize);
   thrust::copy(objects.begin(), objects.end(), objectList.begin());
@@ -189,16 +197,16 @@ static bool NvDsInferParseCustomYoloECuda(std::vector<NvDsInferLayerInfo> const&
   int threads_per_block = 1024;
   int number_of_blocks = ((outputSize - 1) / threads_per_block) + 1;
   #ifdef SOFTMAX
-   // do softmax calculation here
-   // put scores on the device
-   thrust::device_vector<float> raw_scores((float*) (scores.buffer),(float*) (scores.buffer)+outputSize);
-   float exp_sum = thrust::reduce(raw_scores.begin(),raw_scores.end(),0,exp_add());
-   #else
-   float exp_sum=1.;
-   #endif
+  // do softmax calculation here
+  // put scores on the device
+  thrust::device_vector<float> raw_scores((float*) (scores.buffer),(float*) (scores.buffer)+outputSize);
+  float exp_sum = thrust::reduce(raw_scores.begin(),raw_scores.end(),0,exp_add());
+  #else
+  float exp_sum=1.;
+  #endif
   decodeTensorYoloECuda<<<number_of_blocks, threads_per_block>>>(
       thrust::raw_pointer_cast(objects.data()), (float*) (boxes.buffer), (float*) (scores.buffer),
-      (float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height, minPreclusterThreshold);
+      (float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height, minPreclusterThreshold,exp_sum);
 
   objectList.resize(outputSize);
   thrust::copy(objects.begin(), objects.end(), objectList.begin());
