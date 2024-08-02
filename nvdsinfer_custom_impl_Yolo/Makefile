@@ -38,6 +38,12 @@ ifeq ($(GRAPH),)
 	GRAPH=0
 endif
 
+SOFTMAX?=
+ifeq ($(SOFTMAX),)
+	SOFTMAX=0
+endif
+
+
 CC:= g++
 NVCC:=/usr/local/cuda-$(CUDA_VER)/bin/nvcc
 
@@ -50,8 +56,14 @@ ifeq ($(OPENCV), 1)
 	LIBS+= $(shell pkg-config --libs opencv4 2> /dev/null || pkg-config --libs opencv)
 endif
 
+
 ifeq ($(GRAPH), 1)
 	COMMON+= -DGRAPH
+endif
+
+ifeq ($(SOFTMAX), 1)
+	COMMON+= -DSOFTMAX
+	CUCOMMON+= -DSOFTMAX
 endif
 
 CUFLAGS:= -I/opt/nvidia/deepstream/deepstream/sources/includes -I/usr/local/cuda-$(CUDA_VER)/include
@@ -81,7 +93,7 @@ all: $(TARGET_LIB)
 	$(CC) -c $(COMMON) -o $@ $(CFLAGS) $<
 
 %.o: %.cu $(INCS) Makefile
-	$(NVCC) -c -o $@ --compiler-options '-fPIC' $(CUFLAGS) $<
+	$(NVCC) -c $(CUCOMMON) -o $@ --compiler-options '-fPIC' $(CUFLAGS) $<
 
 $(TARGET_LIB) : $(TARGET_OBJS)
 	$(CC) -o $@  $(TARGET_OBJS) $(LFLAGS)
