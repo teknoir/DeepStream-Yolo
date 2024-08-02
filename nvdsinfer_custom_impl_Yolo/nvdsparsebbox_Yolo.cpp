@@ -155,7 +155,11 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
   const NvDsInferLayerInfo * classes = layerFinder("classes");
 
   const uint outputSize = boxes->inferDims.d[0];
-
+  #ifdef SOFTMAX
+  // do softmax calculation here
+  
+  #endif
+  
   std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYolo((const float*) (boxes->buffer),
       (const float*) (scores->buffer), (const float*) (classes->buffer), outputSize, networkInfo.width, networkInfo.height,
       detectionParams.perClassPreclusterThreshold);
@@ -183,7 +187,10 @@ NvDsInferParseCustomYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInf
   const NvDsInferLayerInfo& classes = outputLayersInfo[2];
 
   const uint outputSize = boxes.inferDims.d[0];
-
+  #ifdef SOFTMAX
+  // do softmax calculation here
+   
+   #endif
   std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYoloE((const float*) (boxes.buffer),
       (const float*) (scores.buffer), (const float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height,
       detectionParams.perClassPreclusterThreshold);
