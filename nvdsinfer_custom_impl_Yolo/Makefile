@@ -43,6 +43,11 @@ ifeq ($(SOFTMAX),)
 	SOFTMAX=0
 endif
 
+SIGMOID?=
+ifeq ($(SIGMOID),)
+	SIGMOID=0
+endif
+
 
 CC:= g++
 NVCC:=/usr/local/cuda-$(CUDA_VER)/bin/nvcc
@@ -66,6 +71,11 @@ ifeq ($(SOFTMAX), 1)
 	CUCOMMON+= -DSOFTMAX
 endif
 
+ifeq ($(SIGMOID), 1)
+	COMMON+= -DSIGMOID
+	CUCOMMON+= -DSIGMOID
+endif
+
 CUFLAGS:= -I/opt/nvidia/deepstream/deepstream/sources/includes -I/usr/local/cuda-$(CUDA_VER)/include
 
 LIBS+= -lnvinfer_plugin -lnvinfer -lnvparsers -lnvonnxparser -L/usr/local/cuda-$(CUDA_VER)/lib64 -lcudart -lcublas -lstdc++fs
@@ -85,6 +95,10 @@ SRCFILES+= $(wildcard *.cu)
 TARGET_LIB:= libnvdsinfer_custom_impl_Yolo.so
 ifeq ($(SOFTMAX), 1)
  TARGET_LIB:= libnvdsinfer_custom_impl_Yolo_softmax.so
+endif
+
+ifeq ($(SIGMOID), 1)
+ TARGET_LIB:= libnvdsinfer_custom_impl_Yolo_sigmoid.so
 endif
 
 TARGET_OBJS:= $(SRCFILES:.cpp=.o)
