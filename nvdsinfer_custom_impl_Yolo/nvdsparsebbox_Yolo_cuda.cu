@@ -106,6 +106,8 @@ __global__ void decodeTensorYoloECuda(NvDsInferParseObjectInfo *binfo, float* bo
   #ifdef SOFTMAX
   // do softmax calculation here
   float maxProb = expf(scores[x_id])/exp_sum;
+  #elif SIGMOID
+  float maxProb = 1./(1.+expf(-scores[x_id]));
   #else
   float maxProb = scores[x_id];
   #endif
