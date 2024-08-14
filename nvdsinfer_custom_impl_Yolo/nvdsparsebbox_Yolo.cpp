@@ -26,7 +26,7 @@
 #include "nvdsinfer_custom_impl.h"
 
 #include "utils.h"
-#ifdef SOFTMAX
+#if defined(SOFTMAX) || defined(SIGMOID)
  #include <math.h>
 #endif 
 extern "C" bool
@@ -93,6 +93,8 @@ decodeTensorYolo(const float* boxes, const float* scores, const float* classes, 
   for (uint b = 0; b < outputSize; ++b) {
     #ifdef SOFTMAX
     float maxProb = exp(scores[b])/exp_sum;
+    #elif SIGMOID
+    float maxProb = 1./(1.+exp(-scores[b]));
     #else
     float maxProb = scores[b];
     #endif
@@ -136,6 +138,8 @@ decodeTensorYoloE(const float* boxes, const float* scores, const float* classes,
   for (uint b = 0; b < outputSize; ++b) {
     #ifdef SOFTMAX
     float maxProb = exp(scores[b])/exp_sum;
+    #elif SIGMOID
+    float maxProb = 1./(1.+exp(-scores[b]));
     #else
     float maxProb = scores[b];
     #endif
@@ -183,10 +187,7 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
   const NvDsInferLayerInfo * classes = layerFinder("classes");
 
   const uint outputSize = boxes->inferDims.d[0];
-  #ifdef SOFTMAX
-  // do softmax calculation here
-  
-  #endif
+
   
   std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYolo((const float*) (boxes->buffer),
       (const float*) (scores->buffer), (const float*) (classes->buffer), outputSize, networkInfo.width, networkInfo.height,
