@@ -103,7 +103,13 @@ decodeTensorYolo(const float* boxes, const float* scores, const float* classes, 
     if (maxProb < preclusterThreshold[maxIndex]) {
       continue;
     }
-
+    // if we have an RTDETRv2 model
+    #ifdef RTDETRV2
+    float bx1 = boxes[b * 4 + 0];
+    float bx2 = boxes[b * 4 + 2];
+    float by1 = boxes[b * 4 + 1];
+    float by2 = boxes[b * 4 + 3];
+    #else
     float bxc = boxes[b * 4 + 0];
     float byc = boxes[b * 4 + 1];
     float bw = boxes[b * 4 + 2];
@@ -113,7 +119,7 @@ decodeTensorYolo(const float* boxes, const float* scores, const float* classes, 
     float by1 = byc - bh / 2;
     float bx2 = bx1 + bw;
     float by2 = by1 + bh;
-
+    #endif
     addBBoxProposal(bx1, by1, bx2, by2, netW, netH, maxIndex, maxProb, binfo);
   }
 
