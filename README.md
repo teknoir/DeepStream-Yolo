@@ -3,7 +3,9 @@
 NVIDIA DeepStream SDK 7.0 / 6.4 / 6.3 / 6.2 / 6.1.1 / 6.1 / 6.0.1 / 6.0 / 5.1  configuration for YOLO models
 
 ### RTDETRv2 usage
+
 export RTDETRV2=1
+
 make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
 
 creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
