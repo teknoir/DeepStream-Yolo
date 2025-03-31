@@ -2,6 +2,14 @@
 
 NVIDIA DeepStream SDK 7.0 / 6.4 / 6.3 / 6.2 / 6.1.1 / 6.1 / 6.0.1 / 6.0 / 5.1  configuration for YOLO models
 
+### RTDETRv2 usage
+
+export RTDETRV2=1
+
+make -C nvdsinfer_custom_impl_Yolo clean && make -C nvdsinfer_custom_impl_Yolo
+
+creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
+
 --------------------------------------------------------------------------------------------------
 ### For now, I am limited for some updates. Thank you for understanding.
 --------------------------------------------------------------------------------------------------
@@ -380,5 +388,6 @@ You can get metadata from DeepStream using Python and C/C++. For C/C++, you can 
 Basically, you need manipulate the `NvDsObjectMeta` ([Python](https://docs.nvidia.com/metropolis/deepstream/dev-guide/python-api/PYTHON_API/NvDsMeta/NvDsObjectMeta.html) / [C/C++](https://docs.nvidia.com/metropolis/deepstream/dev-guide/sdk-api/struct__NvDsObjectMeta.html)) `and NvDsFrameMeta` ([Python](https://docs.nvidia.com/metropolis/deepstream/dev-guide/python-api/PYTHON_API/NvDsMeta/NvDsFrameMeta.html) / [C/C++](https://docs.nvidia.com/metropolis/deepstream/dev-guide/sdk-api/struct__NvDsFrameMeta.html)) to get the label, position, etc. of bboxes.
 
 ##
+
 
 My projects: https://www.youtube.com/MarcosLucianoTV
