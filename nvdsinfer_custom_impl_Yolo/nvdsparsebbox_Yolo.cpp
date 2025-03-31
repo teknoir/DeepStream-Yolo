@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2018-2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,15 +26,9 @@
 #include "nvdsinfer_custom_impl.h"
 
 #include "utils.h"
-#if defined(SOFTMAX) || defined(SIGMOID)
- #include <math.h>
-#endif 
+#include <cmath>
 extern "C" bool
 NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
-    NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList);
-
-extern "C" bool
-NvDsInferParseYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList);
 
 static NvDsInferParseObjectInfo
@@ -65,9 +59,15 @@ addBBoxProposal(const float bx1, const float by1, const float bx2, const float b
     const int maxIndex, const float maxProb, std::vector<NvDsInferParseObjectInfo>& binfo)
 {
   NvDsInferParseObjectInfo bbi = convertBBox(bx1, by1, bx2, by2, netW, netH);
-
+  //if (maxIndex==0){
+  //  std::cout << "maxIndex: " << maxIndex << std::endl;
+  //  std::cout << "bbi.width: " << bbi.width << std::endl;
+  //  std::cout << "bbi.height: " << bbi.height << std::endl;
+  //  std::cout << "bbi.left: " << bbi.left << std::endl;
+  //  std::cout << "bbi.top: " << bbi.top << std::endl;
+  //}
   if (bbi.width < 1 || bbi.height < 1) {
-      return;
+    return;
   }
 
   bbi.detectionConfidence = maxProb;
@@ -76,50 +76,27 @@ addBBoxProposal(const float bx1, const float by1, const float bx2, const float b
 }
 
 static std::vector<NvDsInferParseObjectInfo>
-decodeTensorYolo(const float* boxes, const float* scores, const float* classes, const uint& outputSize, const uint& netW,
+decodeTensorYoloE(const float* boxes, const float* scores, const float* classes, const uint& outputSize, const uint& netW,
     const uint& netH, const std::vector<float>& preclusterThreshold)
 {
   std::vector<NvDsInferParseObjectInfo> binfo;
-  float exp_sum=0.0;
-  #ifdef SOFTMAX
-  // do softmax calculation here
-   for (uint b = 0; b < outputSize; ++b)
-    { 
-    exp_sum+=exp(scores[b]);
-    }
-   #else
-   exp_sum=1.0;
-   #endif
+
   for (uint b = 0; b < outputSize; ++b) {
-    #ifdef SOFTMAX
-    float maxProb = exp(scores[b])/exp_sum;
-    #elif SIGMOID
-    float maxProb = 1./(1.+exp(-scores[b]));
-    #else
     float maxProb = scores[b];
-    #endif
     int maxIndex = (int) classes[b];
 
     if (maxProb < preclusterThreshold[maxIndex]) {
       continue;
     }
-    // if we have an RTDETRv2 model
-    #ifdef RTDETRV2
-    float bx1 = boxes[b * 4 + 0];
-    float bx2 = boxes[b * 4 + 2];
-    float by1 = boxes[b * 4 + 1];
-    float by2 = boxes[b * 4 + 3];
-    #else
-    float bxc = boxes[b * 4 + 0];
-    float byc = boxes[b * 4 + 1];
-    float bw = boxes[b * 4 + 2];
-    float bh = boxes[b * 4 + 3];
 
-    float bx1 = bxc - bw / 2;
-    float by1 = byc - bh / 2;
-    float bx2 = bx1 + bw;
-    float by2 = by1 + bh;
-    #endif
+    float bx1 = boxes[b * 4 + 0];
+    float by1 = boxes[b * 4 + 1];
+    float bx2 = boxes[b * 4 + 2];
+    float by2 = boxes[b * 4 + 3];
+    
+
+
+
     addBBoxProposal(bx1, by1, bx2, by2, netW, netH, maxIndex, maxProb, binfo);
   }
 
@@ -127,42 +104,114 @@ decodeTensorYolo(const float* boxes, const float* scores, const float* classes, 
 }
 
 static std::vector<NvDsInferParseObjectInfo>
-decodeTensorYoloE(const float* boxes, const float* scores, const float* classes, const uint& outputSize, const uint& netW,
+decodeTensorYolo(const float* boxes, const float* scores, const float* classes, const uint& outputSize, const uint& netW,
     const uint& netH, const std::vector<float>& preclusterThreshold)
 {
   std::vector<NvDsInferParseObjectInfo> binfo;
-  float exp_sum=0.0;
-  #ifdef SOFTMAX
-  // do softmax calculation here
-  for (uint b = 0; b < outputSize; ++b)
-  { 
-  exp_sum+=exp(scores[b]);
-  }
-  #else
-  exp_sum=1.0;
-  #endif
+  
+  //std::cout << "calling decodeTensorYolo\n";
+  //std::cout << "outputSize: " << outputSize << "\n";
+  //std::cout << "netW: " << netW << "\n";
+  //std::cout << "netH: " << netH << "\n";
+  
+  //std::cout << "preclusterThreshold: " << preclusterThreshold.size() << "\n";
+  
+  int count = 0;
   for (uint b = 0; b < outputSize; ++b) {
-    #ifdef SOFTMAX
-    float maxProb = exp(scores[b])/exp_sum;
-    #elif SIGMOID
-    float maxProb = 1./(1.+exp(-scores[b]));
-    #else
     float maxProb = scores[b];
-    #endif
     int maxIndex = (int) classes[b];
-
     if (maxProb < preclusterThreshold[maxIndex]) {
+        continue;
+      }
+    
+    #ifdef XYWHC
+      //std::cout << "using XYWHC" << std::endl;
+     float bxc = boxes[b * 4 + 0];
+     float byc = boxes[b * 4 + 1];
+     float bw = boxes[b * 4 + 2];
+     float bh = boxes[b * 4 + 3];
+     //std::cout << "bx[0] " << boxes[b*4] << " bx[1] " << boxes[b*4+1]  << " bx[2] " << boxes[b*4+2]  << " bx[3] " << boxes[b*4+3]   << std::endl;
+     float bx1 = bxc - bw / 2;
+     float by1 = byc - bh / 2;
+     float bx2 = bx1 + bw;
+     float by2 = by1 + bh;
+    #elif XYWH
+     //std::cout << "using XYWH" << std::endl;
+     float bx1 = boxes[b * 4 + 0];
+     float by1 = boxes[b * 4 + 1];
+     float bw = boxes[b * 4 + 2];
+     float bh = boxes[b * 4 + 3];
+     float bx2 = bx1 + bw;
+     float by2 = by1 + bh;
+    #else
+     //std::cout << "using XYXY" << std::endl;
+     float bx1 = boxes[b * 4 + 0];
+     float by1 = boxes[b * 4 + 1];
+     float bx2 = boxes[b * 4 + 2];
+     float by2 = boxes[b * 4 + 3];
+    #endif
+    /*
+    if(maxIndex==0){
+    std::cout << "score " << maxProb <<std::endl;
+    std::cout << "class " << maxIndex <<std::endl;
+    NvDsInferParseObjectInfo bbi = convertBBox(bx1, by1, bx2, by2, netW, netH);
+    std::cout << "bbi.width: " << bbi.width << std::endl; 
+    std::cout << "bbi.height: " << bbi.height << std::endl;
+    std::cout << "bbi.left: " << bbi.left << std::endl;
+    std::cout << "bbi.top: " << bbi.top << std::endl;
+    std::cout << "bx1 " << bx1 << " by1 " << by1 << " bx2 " << bx2 << " by2 " << by2  << std::endl;
+    std::cout << "netW " << netW << " netH " << netH << std::endl;
+    std::cout << "bx[0] " << boxes[b*4] << " bx[1] " << boxes[b*4+1]  << " bx[2] " << boxes[b*4+2]  << " bx[3] " << boxes[b*4+3]   << std::endl;
+    }
+    */
+    addBBoxProposal(bx1, by1, bx2, by2, netW, netH, maxIndex, maxProb, binfo);
+    count++;
+  }
+  //std::cout << "count: " << count << "\n";
+  //std::cout << "binfo size: " << binfo.size() << "\n";
+  return binfo;
+}
+
+static std::vector<NvDsInferParseObjectInfo>
+decodeTensorRFDETR(const float* boxes, const float* labels, const uint& outputSize, const uint& numClasses, const uint& netW,
+    const uint& netH, const std::vector<float>& preclusterThreshold)
+{
+  std::vector<NvDsInferParseObjectInfo> binfo;
+
+  for (uint b = 0; b < outputSize; ++b) 
+  {
+    uint maxIndex = 0;
+    float maxProb = labels[b * numClasses];
+    
+    for (uint c = 0; c < numClasses; ++c)
+    {
+      if (labels[b * numClasses + c] > maxProb)
+      {
+        maxProb = labels[b * numClasses + c];
+        maxIndex = c;
+      }
+    }
+    /*
+    if (maxProb < preclusterThreshold[maxIndex])
+    {
       continue;
     }
+    */
 
-    float bx1 = boxes[b * 4 + 0];
-    float by1 = boxes[b * 4 + 1];
-    float bx2 = boxes[b * 4 + 2];
-    float by2 = boxes[b * 4 + 3];
-
+    float xc = boxes[b * 4 + 0]*(float)netW  ;
+    float yc = boxes[b * 4 + 1]*(float)netH;
+    float w = boxes[b * 4 + 2]*(float)netW;
+    float h = boxes[b * 4 + 3]*(float)netH;
+    float bx1 = xc - w/2;
+    float by1 = yc - h/2;
+    float bx2 = bx1 + w;
+    float by2 = by1 + h;
+    //std::cout << "--------------------------------" << std::endl;
+    //std::cout << "bx1 " << bx1 << " by1 " << by1 << " bx2 " << bx2 << " by2 " << by2 << std::endl;
+    // std::cout << "maxIndex " << maxIndex << " maxProb " << maxProb << " softmax " << softmax << std::endl;
+    //std::cout << "--------------------------------" << std::endl;
     addBBoxProposal(bx1, by1, bx2, by2, netW, netH, maxIndex, maxProb, binfo);
   }
-
   return binfo;
 }
 
@@ -175,64 +224,59 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
     return false;
   }
 
-  auto layerFinder = [&outputLayersInfo](const std::string &name)
-      -> const NvDsInferLayerInfo *{
+  std::vector<NvDsInferParseObjectInfo> objects;
+
+  auto layerFinder = [&outputLayersInfo](const std::string &name) -> const NvDsInferLayerInfo *{
       for (auto &layer : outputLayersInfo) {
-          if (layer.dataType == FLOAT &&
+        if (layer.dataType == FLOAT &&
             (layer.layerName && name == layer.layerName)) {
-              return &layer;
-          }
+          //std::cout << "found layer name: " << layer.layerName << "\n";
+          return &layer;
+        }
       }
       return nullptr;
   };
 
-  std::vector<NvDsInferParseObjectInfo> objects;
 
-  const NvDsInferLayerInfo * boxes = layerFinder("boxes");
-  const NvDsInferLayerInfo * scores = layerFinder("scores");
-  const NvDsInferLayerInfo * classes = layerFinder("classes");
+  // need different parsing for RFDETR 
+  #ifdef RFDETR
 
+  const NvDsInferLayerInfo *boxes = layerFinder("dets");
+  const NvDsInferLayerInfo *labels = layerFinder("labels");
   const uint outputSize = boxes->inferDims.d[0];
-
+  const uint numClasses = labels->inferDims.d[1];
+  //std::cout << "boxes number of dims: " << boxes->inferDims.numDims << "\n";
+  //std::cout << "boxes number of elements dim 0: " << boxes->inferDims.d[0] << "\n";
+  //std::cout << "boxes number of elements dim 1: " << boxes->inferDims.d[1] << "\n";
+  //std::cout << "labels number of dims: " << labels->inferDims.numDims << "\n";
+  //std::cout << "labels number of elements dim 0: " << labels->inferDims.d[0] << "\n";
+  //std::cout << "labels number of elements dim 1: " << labels->inferDims.d[1] << "\n";
   
+  std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorRFDETR((const float*) (boxes->buffer),
+      (const float*) (labels->buffer), outputSize, numClasses, networkInfo.width, networkInfo.height,
+      detectionParams.perClassPreclusterThreshold);
+
+  #else
+  const NvDsInferLayerInfo *boxes = layerFinder("boxes");
+  const NvDsInferLayerInfo *scores = layerFinder("scores");
+  const NvDsInferLayerInfo *classes = layerFinder("classes");
+  const uint outputSize = boxes->inferDims.d[0];
+  //std::cout << "boxes number of dims: " << boxes->inferDims.numDims << "\n";
+  //std::cout << "boxes number of elements dim 0: " << boxes->inferDims.d[0] << "\n";
+  //std::cout << "boxes number of elements dim 1: " << boxes->inferDims.d[1] << "\n";
+  
+  //std::cout << "calling decodeTensorYolo\n";
+  //std::cout << "numClassesConfigured: " << detectionParams.numClassesConfigured << " - outputSize: " << outputSize << "\n";
   std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYolo((const float*) (boxes->buffer),
       (const float*) (scores->buffer), (const float*) (classes->buffer), outputSize, networkInfo.width, networkInfo.height,
       detectionParams.perClassPreclusterThreshold);
-
+  //std::cout << "calling decodeTensorYolo - success\n";
+  //std::cout << "outObjs size: " << outObjs.size() << "\n";
+  
+  #endif
   objects.insert(objects.end(), outObjs.begin(), outObjs.end());
-
   objectList = objects;
-
-  return true;
-}
-
-static bool
-NvDsInferParseCustomYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
-    NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
-{
-  if (outputLayersInfo.empty()) {
-    std::cerr << "ERROR: Could not find output layer in bbox parsing" << std::endl;
-    return false;
-  }
-
-  std::vector<NvDsInferParseObjectInfo> objects;
-
-  const NvDsInferLayerInfo& boxes = outputLayersInfo[0];
-  const NvDsInferLayerInfo& scores = outputLayersInfo[1];
-  const NvDsInferLayerInfo& classes = outputLayersInfo[2];
-
-  const uint outputSize = boxes.inferDims.d[0];
-  #ifdef SOFTMAX
-  // do softmax calculation here
-   
-   #endif
-  std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYoloE((const float*) (boxes.buffer),
-      (const float*) (scores.buffer), (const float*) (classes.buffer), outputSize, networkInfo.width, networkInfo.height,
-      detectionParams.perClassPreclusterThreshold);
-
-  objects.insert(objects.end(), outObjs.begin(), outObjs.end());
-
-  objectList = objects;
+  //std::cout << "returning from NvDsInferParseCustomYolo\n";
 
   return true;
 }
@@ -241,15 +285,37 @@ extern "C" bool
 NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
 {
-  return NvDsInferParseCustomYolo(outputLayersInfo, networkInfo, detectionParams, objectList);
+  //d::cout << "returning from NvDsInferParseYolo\n";
+  //std::cout << "objectList size: " << objectList.size() << "\n";
+  bool result = NvDsInferParseCustomYolo(outputLayersInfo, networkInfo, detectionParams, objectList);
+  //std::cout << "objectList size: " << objectList.size() << "\n";
+  //std::cout << "result: " << result << "\n";
+  /*
+  int classList[10]={0,0,0,0,0,0,0,0,0,0};
+
+  for(auto obj : objectList){
+    if (obj.classId <10){
+    classList[obj.classId]++;
+    }
+    if (obj.classId == 1){
+      std::cout << "obj.classId: " << obj.classId << std::endl;
+      std::cout << "obj.detectionConfidence: " << obj.detectionConfidence << std::endl;
+      std::cout << "obj.left: " << obj.left << std::endl;
+      std::cout << "obj.top: " << obj.top << std::endl;
+      std::cout << "obj.width: " << obj.width << std::endl;
+      std::cout << "obj.height: " << obj.height << std::endl;
+    }
+  }
+  for(int i=0;i<10;i++){
+    std::cout << i << ":" << classList[i] << " ";
+  }
+  std::cout << std::endl;
+  */
+  return result;
 }
 
-extern "C" bool
-NvDsInferParseYoloE(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
-    NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
-{
-  return NvDsInferParseCustomYoloE(outputLayersInfo, networkInfo, detectionParams, objectList);
-}
+
 
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseYolo);
-CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseYoloE);
+
+
