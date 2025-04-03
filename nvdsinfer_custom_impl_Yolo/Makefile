@@ -53,6 +53,11 @@ ifeq ($(RTDETRV2),)
 	RTDETRV2=0
 endif
 
+RFDETR?=
+ifeq ($(RFDETR),)
+	RFDETR=0
+endif
+
 CC:= g++
 NVCC:=/usr/local/cuda-$(CUDA_VER)/bin/nvcc
 
@@ -68,6 +73,10 @@ endif
 
 ifeq ($(GRAPH), 1)
 	COMMON+= -DGRAPH
+endif
+
+ifeq ($(RFDETR), 1)
+	COMMON+= -DRFDETR
 endif
 
 ifeq ($(SOFTMAX), 1)
@@ -96,7 +105,7 @@ LFLAGS:= -shared -Wl,--start-group $(LIBS) -Wl,--end-group
 INCS:= $(wildcard layers/*.h)
 INCS+= $(wildcard *.h)
 
-SRCFILES:= $(filter-out calibrator.cpp, $(wildcard *.cpp))
+SRCFILES:= $(filter-out calibrator.cpp, filter-out nvdsparsebbox_Yolo.cpp, filter-out nvdsparsebbox_RTDETR.cpp, $(wildcard *.cpp))
 
 ifeq ($(OPENCV), 1)
 	SRCFILES+= calibrator.cpp
@@ -111,7 +120,10 @@ ifeq ($(SOFTMAX), 1)
 endif
 
 ifeq ($(RTDETRV2), 1)
+ SRCFILES+= nvdsparsebbox_RTDETR.cpp
  TARGET_LIB:= libnvdsinfer_custom_impl_Yolo_rtdetrv2.so
+else
+ SRCFILES+= nvdsparsebbox_Yolo.cpp
 endif
 
 ifeq ($(SIGMOID), 1)
