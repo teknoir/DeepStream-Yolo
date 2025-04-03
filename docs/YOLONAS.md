@@ -19,7 +19,7 @@ git clone https://github.com/Deci-AI/super-gradients.git
 cd super-gradients
 pip3 install -r requirements.txt
 python3 setup.py install
-pip3 install onnx onnxsim onnxruntime
+pip3 install onnx onnxslim onnxruntime
 ```
 
 **NOTE**: It is recommended to use Python virtualenv.
@@ -30,10 +30,10 @@ Copy the `export_yolonas.py` file from `DeepStream-Yolo/utils` directory to the 
 
 #### 3. Download the model
 
-Download the `pth` file from [YOLO-NAS](https://sghub.deci.ai/) releases (example for YOLO-NAS S)
+Download the `pth` file from [YOLO-NAS](https://sg-hub-nv.s3.amazonaws.com/) releases (example for YOLO-NAS S)
 
 ```
-wget https://sghub.deci.ai/models/yolo_nas_s_coco.pth
+wget https://sg-hub-nv.s3.amazonaws.com/models/yolo_nas_s_coco.pth
 ```
 
 **NOTE**: You can use your custom model.
@@ -140,6 +140,7 @@ export CUDA_VER=XY.Z
 * x86 platform
 
   ```
+  DeepStream 7.1 = 12.6
   DeepStream 7.0 / 6.4 = 12.2
   DeepStream 6.3 = 12.1
   DeepStream 6.2 = 11.8
@@ -152,6 +153,7 @@ export CUDA_VER=XY.Z
 * Jetson platform
 
   ```
+  DeepStream 7.1 = 12.6
   DeepStream 7.0 / 6.4 = 12.2
   DeepStream 6.3 / 6.2 / 6.1.1 / 6.1 = 11.4
   DeepStream 6.0.1 / 6.0 / 5.1 = 10.2
@@ -172,11 +174,11 @@ Edit the `config_infer_primary_yolonas.txt` file according to your model (exampl
 ```
 [property]
 ...
-onnx-file=yolo_nas_s_coco.onnx
+onnx-file=yolo_nas_s_coco.pth.onnx
 ...
 num-detected-classes=80
 ...
-parse-bbox-func-name=NvDsInferParseYoloE
+parse-bbox-func-name=NvDsInferParseYolo
 ...
 ```
 

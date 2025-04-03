@@ -1,6 +1,6 @@
 # DeepStream-Yolo
 
-NVIDIA DeepStream SDK 7.0 / 6.4 / 6.3 / 6.2 / 6.1.1 / 6.1 / 6.0.1 / 6.0 / 5.1  configuration for YOLO models
+NVIDIA DeepStream SDK 7.1 / 7.0 / 6.4 / 6.3 / 6.2 / 6.1.1 / 6.1 / 6.0.1 / 6.0 / 5.1  configuration for YOLO models
 
 ### RTDETRv2 usage
 
@@ -20,19 +20,13 @@ creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
 ### Important: please export the ONNX model with the new export file, generate the TensorRT engine again with the updated files, and use the new config_infer_primary file according to your model
 --------------------------------------------------------------------------------------------------
 
-### Future updates
-
-* DeepStream tutorials
-* Updated INT8 calibration
-* Support for classification models
-
 ### Improvements on this repository
 
 * Support for INT8 calibration
 * Support for non square models
 * Models benchmarks
 * Support for Darknet models (YOLOv4, etc) using cfg and weights conversion with GPU post-processing
-* Support for RT-DETR, YOLO-NAS, PPYOLOE+, PPYOLOE, DAMO-YOLO, YOLOX, YOLOR, YOLOv8, YOLOv7, YOLOv6 and YOLOv5 using ONNX conversion with GPU post-processing
+* Support for RT-DETR, CO-DETR (MMDetection), YOLO-NAS, PPYOLOE+, PPYOLOE, DAMO-YOLO, Gold-YOLO, RTMDet (MMYOLO), YOLOX, YOLOR, YOLO11, YOLOv10, YOLOv9, YOLOv8, YOLOv7, YOLOv6, YOLOv5u and YOLOv5 using ONNX conversion with GPU post-processing
 * GPU bbox parser
 * Custom ONNX model parser
 * Dynamic batch-size
@@ -52,14 +46,21 @@ creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
 * [Notes](#notes)
 * [INT8 calibration](docs/INT8Calibration.md)
 * [YOLOv5 usage](docs/YOLOv5.md)
+* [YOLOv5u usage](docs/YOLOv5u.md)
 * [YOLOv6 usage](docs/YOLOv6.md)
 * [YOLOv7 usage](docs/YOLOv7.md)
 * [YOLOv8 usage](docs/YOLOv8.md)
+* [YOLOv9 usage](docs/YOLOv9.md)
+* [YOLOv10 usage](docs/YOLOv10.md)
+* [YOLO11 usage](docs/YOLO11.md)
 * [YOLOR usage](docs/YOLOR.md)
 * [YOLOX usage](docs/YOLOX.md)
+* [RTMDet (MMYOLO) usage](docs/RTMDet.md)
+* [Gold-YOLO usage](docs/GoldYOLO.md)
 * [DAMO-YOLO usage](docs/DAMOYOLO.md)
 * [PP-YOLOE / PP-YOLOE+ usage](docs/PPYOLOE.md)
 * [YOLO-NAS usage](docs/YOLONAS.md)
+* [CO-DETR (MMDetection) usage](docs/CODETR.md)
 * [RT-DETR PyTorch usage](docs/RTDETR_PyTorch.md)
 * [RT-DETR Paddle usage](docs/RTDETR_Paddle.md)
 * [RT-DETR Ultralytics usage](docs/RTDETR_Ultralytics.md)
@@ -69,6 +70,16 @@ creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
 ##
 
 ### Requirements
+
+#### DeepStream 7.1 on x86 platform
+
+* [Ubuntu 22.04](https://releases.ubuntu.com/22.04/)
+* [CUDA 12.6 Update 2](https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=runfile_local)
+* [TensorRT 10.3 GA (10.3.0.26)](https://developer.nvidia.com/nvidia-tensorrt-8x-download)
+* [NVIDIA Driver 535.183.06 (Data center / Tesla series) / 560.35.03 (TITAN, GeForce RTX / GTX series and RTX / Quadro series)](https://www.nvidia.com/Download/index.aspx)
+* [NVIDIA DeepStream SDK 7.1](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/deepstream/files?version=7.1)
+* [GStreamer 1.20.3](https://gstreamer.freedesktop.org/)
+* [DeepStream-Yolo](https://github.com/marcoslucianops/DeepStream-Yolo)
 
 #### DeepStream 7.0 on x86 platform
 
@@ -150,6 +161,12 @@ creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
 * [GStreamer 1.14.5](https://gstreamer.freedesktop.org/)
 * [DeepStream-Yolo](https://github.com/marcoslucianops/DeepStream-Yolo)
 
+#### DeepStream 7.1 on Jetson platform
+
+* [JetPack 6.1](https://developer.nvidia.com/embedded/jetpack-sdk-61)
+* [NVIDIA DeepStream SDK 7.1](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/deepstream/files?version=7.1)
+* [DeepStream-Yolo](https://github.com/marcoslucianops/DeepStream-Yolo)
+
 #### DeepStream 7.0 on Jetson platform
 
 * [JetPack 6.0](https://developer.nvidia.com/embedded/jetpack-sdk-60)
@@ -206,14 +223,22 @@ creates libnvdsinfer_custom_impl_Yolo_rtdetrv2.so for use with deepstream
 * [MobileNet-YOLO](https://github.com/dog-qiuqiu/MobileNet-Yolo)
 * [YOLO-Fastest](https://github.com/dog-qiuqiu/Yolo-Fastest)
 * [YOLOv5](https://github.com/ultralytics/yolov5)
+* [YOLOv5u](https://github.com/ultralytics/ultralytics)
 * [YOLOv6](https://github.com/meituan/YOLOv6)
 * [YOLOv7](https://github.com/WongKinYiu/yolov7)
 * [YOLOv8](https://github.com/ultralytics/ultralytics)
+* [YOLOv9](https://github.com/WongKinYiu/yolov9)
+* [YOLOv10](https://github.com/THU-MIG/yolov10)
+* [YOLO11](https://github.com/ultralytics/ultralytics)
 * [YOLOR](https://github.com/WongKinYiu/yolor)
 * [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX)
+* [RTMDet (MMYOLO)](https://github.com/open-mmlab/mmyolo/tree/main/configs/rtmdet)
+* [Gold-YOLO](https://github.com/huawei-noah/Efficient-Computing/tree/master/Detection/Gold-YOLO)
 * [DAMO-YOLO](https://github.com/tinyvision/DAMO-YOLO)
-* [PP-YOLOE / PP-YOLOE+](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.6/configs/ppyoloe)
+* [PP-YOLOE / PP-YOLOE+](https://github.com/PaddlePaddle/PaddleDetection/tree/release/2.8/configs/ppyoloe)
 * [YOLO-NAS](https://github.com/Deci-AI/super-gradients/blob/master/YOLONAS.md)
+* [CO-DETR (MMDetection)](https://github.com/open-mmlab/mmdetection/tree/main/projects/CO-DETR)
+* [RT-DETR](https://github.com/lyuwenyu/RT-DETR)
 
 ##
 
@@ -239,6 +264,7 @@ export CUDA_VER=XY.Z
 * x86 platform
 
   ```
+  DeepStream 7.1 = 12.6
   DeepStream 7.0 / 6.4 = 12.2
   DeepStream 6.3 = 12.1
   DeepStream 6.2 = 11.8
@@ -251,6 +277,7 @@ export CUDA_VER=XY.Z
 * Jetson platform
 
   ```
+  DeepStream 7.1 = 12.6
   DeepStream 7.0 / 6.4 = 12.2
   DeepStream 6.3 / 6.2 / 6.1.1 / 6.1 = 11.4
   DeepStream 6.0.1 / 6.0 / 5.1 = 10.2
@@ -305,14 +332,14 @@ config-file=config_infer_primary_yoloV2.txt
 * x86 platform
 
   ```
-  nvcr.io/nvidia/deepstream:7.0-gc-triton-devel
-  nvcr.io/nvidia/deepstream:7.0-triton-multiarch
+  nvcr.io/nvidia/deepstream:7.1-gc-triton-devel
+  nvcr.io/nvidia/deepstream:7.1-triton-multiarch
   ```
 
 * Jetson platform
 
   ```
-  nvcr.io/nvidia/deepstream:7.0-triton-multiarch
+  nvcr.io/nvidia/deepstream:7.1-triton-multiarch
   ```
 
 **NOTE**: To compile the `nvdsinfer_custom_impl_Yolo`, you need to install the g++ inside the container
@@ -321,7 +348,7 @@ config-file=config_infer_primary_yoloV2.txt
 apt-get install build-essential
 ```
 
-**NOTE**: With DeepStream 7.0, the docker containers do not package libraries necessary for certain multimedia operations like audio data parsing, CPU decode, and CPU encode. This change could affect processing certain video streams/files like mp4 that include audio track. Please run the below script inside the docker images to install additional packages that might be necessary to use all of the DeepStreamSDK features:
+**NOTE**: With DeepStream 7.1, the docker containers do not package libraries necessary for certain multimedia operations like audio data parsing, CPU decode, and CPU encode. This change could affect processing certain video streams/files like mp4 that include audio track. Please run the below script inside the docker images to install additional packages that might be necessary to use all of the DeepStreamSDK features:
 
 ```
 /opt/nvidia/deepstream/deepstream/user_additional_install.sh
