@@ -105,7 +105,8 @@ LFLAGS:= -shared -Wl,--start-group $(LIBS) -Wl,--end-group
 INCS:= $(wildcard layers/*.h)
 INCS+= $(wildcard *.h)
 
-SRCFILES:= $(filter-out calibrator.cpp, filter-out nvdsparsebbox_Yolo.cpp, filter-out nvdsparsebbox_RTDETR.cpp, $(wildcard *.cpp))
+SRCFILES:= $(filter-out calibrator.cpp, $(wildcard *.cpp))
+SRCFILES:= $(filter-out nvdsparsebbox_RTDETR.cpp, $(SRCFILES))
 
 ifeq ($(OPENCV), 1)
 	SRCFILES+= calibrator.cpp
@@ -120,10 +121,15 @@ ifeq ($(SOFTMAX), 1)
 endif
 
 ifeq ($(RTDETRV2), 1)
+ SRCFILES:= $(filter-out nvdsparsebbox_Yolo.cpp, $(SRCFILES))
  SRCFILES+= nvdsparsebbox_RTDETR.cpp
- TARGET_LIB:= libnvdsinfer_custom_impl_Yolo_rtdetrv2.so
+ TARGET_LIB:= libnvdsinfer_custom_impl_rtdetrv2.so
 else
  SRCFILES+= nvdsparsebbox_Yolo.cpp
+endif
+
+ifeq ($(RFDETR), 1)
+ TARGET_LIB:= libnvdsinfer_custom_impl_rfdetr.so
 endif
 
 ifeq ($(SIGMOID), 1)
